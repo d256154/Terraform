@@ -10,7 +10,7 @@ version = "=2.46.0"
 
 provider "azurerm" {
 features {}
-subscription_id = "2a398193-e726-4126-8472-dd1e313dd213"
+subscription_id = "?"
 }
 
 # Create a resource group if it doesn't exist
