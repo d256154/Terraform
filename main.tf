@@ -10,7 +10,7 @@ version = "=2.46.0"
 
 provider "azurerm" {
 features {}
-subscription_id = "?"
+subscription_id = "*"
 }
 
 # Create a resource group if it doesn't exist
@@ -107,7 +107,7 @@ resource "azurerm_network_interface" "myterraformnic2" {
     resource_group_name       = azurerm_resource_group.myterraformgroup.name
 
     ip_configuration {
-        name                          = "myNicConfiguration"
+        name                          = "myNicConfiguration2"
         subnet_id                     = azurerm_subnet.myterraformsubnet2.id
         private_ip_address_allocation = "Dynamic"
     }
@@ -158,7 +158,7 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
         azurerm_network_interface.myterraformnic2.*.id[count.index],
       ]
     os_disk {
-        name                 = "myOsDisk"
+        name                 = "myOsDisk-${count.index}"
         caching              = "ReadWrite"
         storage_account_type = "Premium_LRS"
     }
@@ -171,9 +171,9 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
     }
 
     computer_name  = "dbsrv"
-    admin_username = "?"
+    admin_username = "*"
     disable_password_authentication = false
-    admin_password     = "?"
+    admin_password     = "*"
 
     boot_diagnostics {
         storage_account_uri = azurerm_storage_account.mystorageaccount.primary_blob_endpoint
@@ -188,13 +188,13 @@ resource "azurerm_windows_virtual_machine" "myterraformvm2" {
   resource_group_name   = azurerm_resource_group.myterraformgroup.name
   location              = "West us2"
   size                  = "Standard_F2"
-  admin_username        = "?"
-  admin_password        = "?"
+  admin_username        = "*"
+  admin_password        = "*"
   #network_interface_ids = [azurerm_network_interface.myterraformnic.id]
   network_interface_ids = [
       azurerm_network_interface.myterraformnic.*.id[count.index],
     ]
-  #disable_password_authentication = false
+  availability_set_id = azurerm_availability_set.Server-avilabilitySet.id
 
   os_disk {
     caching              = "ReadWrite"
@@ -231,7 +231,7 @@ resource "azurerm_lb" "FrontLB" {
 
 # Configure backend adress pull for loadBalancer
 resource "azurerm_lb_backend_address_pool" "pool" {
-  resource_group_name = azurerm_resource_group.myterraformgroup.name
+  #resource_group_name = azurerm_resource_group.myterraformgroup.name
   loadbalancer_id = azurerm_lb.FrontLB.id
   name            = "FrontEndAddressPool"
 }
@@ -244,11 +244,10 @@ resource "azurerm_lb_probe" "azurerm_lb_probe" {
 }
 
 # Associating the network interface to the loadBalancer backend adress pull
-
 resource "azurerm_network_interface_backend_address_pool_association" "association" {
   count = 2
     network_interface_id    = element(azurerm_network_interface.myterraformnic.*.id, count.index)
-    ip_configuration_name   = "external"
+    ip_configuration_name   = "myNicConfiguration"
     backend_address_pool_id = element(azurerm_lb_backend_address_pool.pool.*.id, count.index)
 }
 
@@ -262,4 +261,11 @@ resource "azurerm_lb_rule" "lb_rule" {
   frontend_ip_configuration_name = "PublicIPforLB"
   probe_id = azurerm_lb_probe.azurerm_lb_probe.id
   backend_address_pool_id = azurerm_lb_backend_address_pool.pool.id
+}
+
+# Configure server avilability set
+resource "azurerm_availability_set" "Server-avilabilitySet" {
+  name                = "Server-avilabilitySet"
+  location            = "West us2"
+  resource_group_name = azurerm_resource_group.myterraformgroup.name
 }
